@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "stdio.h": "c",
+        "pitagoras.h": "c",
+        "nwd.h": "c",
+        "conio.h": "c"
+    }
+}
