@@ -1,0 +1,2 @@
+Lab 1 - dynamiczne struktury danych
+Zadanie zaliczeniowe: (C, Linux) Lista dwukierunkowa obsługująca łańcuchy tekstowe o dowolnej długości, podczas wstawiania automatyczne sortowanie listy odwrotnie alfabetyczne, funkcja wyświetlania wszystkich elementów listy, funkcja usuwania dowolnego elementu listy (po indeksie listy, gdzie 0 to indeks pierwszego po begin elementu listy), "menu" po uruchomieniu aplikacji z konsoli umożliwiające powyższe operacje na liście.

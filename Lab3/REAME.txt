@@ -1,0 +1,5 @@
+Lab 3 - wieloprocesowość w systemie Linux
+Zadanie zaliczeniowe (C, Linux): skrypt (1.) + program w C (2.)
+1. (skrypt powłoki Linux, np. bash) umożliwić równoległe uruchomienie min. 4 poleceń np. wget (duży plik), ping (ograniczony przez timeout lub liczbę powtórzeń), sleep itp. Zamknąć (zakończyć) skrypt dopiero, gdy wszystkie procesy potomne się zakończą.
+Skrypt musi umożliwiać elastyczne dodawanie (dowolnej liczby!) nowych poleceń do uruchomienia.
+2. (C, Linux) to samo co w skrypcie (1.), ale tym razem realizowane w kodzie C.
