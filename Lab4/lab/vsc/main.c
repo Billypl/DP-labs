@@ -14,6 +14,85 @@ int fullProcessClose(int processNumber);
 int terminateProcess(int processNumber);
 void closeProcessHandles(int processNumber);
 
+void handleProcessesMenu();
+void handleNewProcessMenu();
+void handleProcessStopping();
+void handleProcessesShowing();
+
+int main()
+{
+    printColored(printf("Start\n"), GREEN);
+    handleProcessesMenu();
+    for (int i = 0; i < processesHandler.currProcNum; i++)
+    {
+        if (processesHandler.isEnded[i] == false)
+        {
+            terminateProcess(i);
+        }
+        closeProcessHandles(i);
+    }
+    printColored(printf("Finish\n"), GREEN);
+    return 0;
+}
+
+/*------------------------------------------------------------------------------------------------------------*/
+int startNewProcess(DWORD priority)
+{
+    char exe_path[] = "sub.exe";
+    STARTUPINFO structStartupInfo; /* struktura startowa */
+    PROCESS_INFORMATION subProcInfo;
+    // wypełniamy strukturę startową danymi bieżącego procesu
+    GetStartupInfo(&structStartupInfo);
+
+    if (!CreateProcess(NULL,               /* lpApplicationName - nazwa modułu, zostawiamy puste */
+                       exe_path,           /* lpCommandLine - lista parametrów, jeśli lpApplicationName == NULL to pierwszy parametr tu jest ścieżką do pliku EXE który będzie procesem podrzędnym */
+                       NULL,               /* lpProcessAttributes - wskaźnik do struktury SECURITY_ATTRIBUTES, która określa, czy zwrócone dojście do nowego obiektu procesu może być dziedziczone przez procesy potomne */
+                       NULL,               /* lpThreadAttributes */
+                       FALSE,              /* bInheritHandles */
+                       CREATE_NEW_CONSOLE, /* dwCreationFlags - ustawiając flagę CREATE_NEW_CONSOLE umożliwiamy otwarcie nowego okna konsoli dla procesu podrzędnego */
+                       0,                  /* lpEnvironment */
+                       0,                  /* lpCurrentDirectory */
+                       &structStartupInfo, /* lpStartupInfo - wskaźnik na strukturę startową */
+                       &subProcInfo        /* lpProcessInformation - wskaźnik na strukturę z danymi procesu podrzędnego */
+                       ))
+    {
+        LOGGER(printColored(printf("CreateProcess failed (%d).\n", GetLastError()), RED));
+        return 1;
+    }
+
+    processesHandler.processes[processesHandler.currProcNum] = subProcInfo;
+    processesHandler.currProcNum++;
+
+    return 0;
+}
+
+int terminateProcess(int processNumber)
+{
+    // próbujemy zakończyć proces podrzędny (bo sam się nie skończy wraz z zakończeniem procesu nadrzędnego!)
+    // niebezpieczna metoda
+    if (!TerminateProcess(processesHandler.processes[processNumber].hProcess, 0))
+    {
+        // LOGGER(printColored(printf("TerminateProcess failed (%d).\n", GetLastError()), RED));
+        return GetLastError();
+    }
+    processesHandler.isEnded[processNumber] = true;
+    return 0;
+}
+
+void closeProcessHandles(int processNumber)
+{
+    // zamykamy stosowne uchwyty
+    CloseHandle(processesHandler.processes[processNumber].hProcess);
+    CloseHandle(processesHandler.processes[processNumber].hThread);
+}
+
+int fullProcessClose(int processNumber)
+{
+    int ret = terminateProcess(processNumber);
+    closeProcessHandles(processNumber);
+    return ret;
+}
+
 void handleNewProcessMenu()
 {
     indent();
@@ -69,6 +148,12 @@ void handleProcessStopping()
         {
             system("cls");
             LOGGER(printColored(printf("Successfully closed process with index: %d \n", processNumber), GREEN));
+            deindent();
+            return;
+        }
+        else
+        {
+            LOGGER(printColored(printf("Process already closed: %d \n", processNumber), RED));
             deindent();
             return;
         }
@@ -150,78 +235,4 @@ void handleProcessesMenu()
         }
     }
     deindent();
-}
-
-int main()
-{
-    printColored(printf("Start\n"), GREEN);
-    handleProcessesMenu();
-    for (int i = 0; i < processesHandler.currProcNum; i++)
-    {
-        if (processesHandler.isEnded[i] == false)
-        {
-            terminateProcess(i);
-        }
-        closeProcessHandles(i);
-    }
-    printColored(printf("Finish\n"), GREEN);
-    return 0;
-}
-
-/*------------------------------------------------------------------------------------------------------------*/
-int startNewProcess(DWORD priority)
-{
-    char exe_path[] = "sub.exe";
-    STARTUPINFO structStartupInfo; /* struktura startowa */
-    PROCESS_INFORMATION subProcInfo;
-    // wypełniamy strukturę startową danymi bieżącego procesu
-    GetStartupInfo(&structStartupInfo);
-
-    if (!CreateProcess(NULL,               /* lpApplicationName - nazwa modułu, zostawiamy puste */
-                       exe_path,           /* lpCommandLine - lista parametrów, jeśli lpApplicationName == NULL to pierwszy parametr tu jest ścieżką do pliku EXE który będzie procesem podrzędnym */
-                       NULL,               /* lpProcessAttributes - wskaźnik do struktury SECURITY_ATTRIBUTES, która określa, czy zwrócone dojście do nowego obiektu procesu może być dziedziczone przez procesy potomne */
-                       NULL,               /* lpThreadAttributes */
-                       FALSE,              /* bInheritHandles */
-                       CREATE_NEW_CONSOLE, /* dwCreationFlags - ustawiając flagę CREATE_NEW_CONSOLE umożliwiamy otwarcie nowego okna konsoli dla procesu podrzędnego */
-                       0,                  /* lpEnvironment */
-                       0,                  /* lpCurrentDirectory */
-                       &structStartupInfo, /* lpStartupInfo - wskaźnik na strukturę startową */
-                       &subProcInfo        /* lpProcessInformation - wskaźnik na strukturę z danymi procesu podrzędnego */
-                       ))
-    {
-        LOGGER(printColored(printf("CreateProcess failed (%d).\n", GetLastError()), RED));
-        return 1;
-    }
-
-    processesHandler.processes[processesHandler.currProcNum] = subProcInfo;
-    processesHandler.currProcNum++;
-
-    return 0;
-}
-
-int terminateProcess(int processNumber)
-{
-    // próbujemy zakończyć proces podrzędny (bo sam się nie skończy wraz z zakończeniem procesu nadrzędnego!)
-    // niebezpieczna metoda
-    if (!TerminateProcess(processesHandler.processes[processNumber].hProcess, 0))
-    {
-        // LOGGER(printColored(printf("TerminateProcess failed (%d).\n", GetLastError()), RED));
-        return 2;
-    }
-    processesHandler.isEnded[processNumber] = true;
-    return 0;
-}
-
-void closeProcessHandles(int processNumber)
-{
-    // zamykamy stosowne uchwyty
-    CloseHandle(processesHandler.processes[processNumber].hProcess);
-    CloseHandle(processesHandler.processes[processNumber].hThread);
-}
-
-int fullProcessClose(int processNumber)
-{
-    int ret = terminateProcess(processNumber);
-    closeProcessHandles(processNumber);
-    return ret;
 }

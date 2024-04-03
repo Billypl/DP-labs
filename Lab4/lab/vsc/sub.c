@@ -26,15 +26,76 @@ void gotoxy(int x, int y)
     coord.Y = y;
     SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), coord);
 }
-
 HANDLE mutex;
-
 int globalCounter;
 int threadsCount = 0;
 HANDLE threads[MAX_THREADS_NUMBER];
 struct threadData threadsData[MAX_THREADS_NUMBER];
 
 DWORD WINAPI worker(void *args);
+
+void clearLogsAndGainMutex();
+
+void createNewThread(int THREAD_PRIORITY, int argument);
+void deleteThread(int index);
+
+void handleThreadsMenu();
+void handleNewThreadCreation();
+void handleThreadDeletion();
+void handleThreadPriorityChange();
+void changeThreadPriority(int index, int NEW_PRIORITY);
+int handlePriorityChoosing();
+int handleThreadSpeedChoosing();
+
+int main(int argc, char **argv)
+{
+    mutex = CreateMutex(NULL, FALSE, NULL);
+    int i;
+    system("cls");
+    printf("Uruchomienie programu \n");
+    handleThreadsMenu();
+    printf("FINISED - wait for 1s\n");
+    return 0;
+}
+
+void printLoadingBar(struct threadData *argumentData)
+{
+    double progress = (double)++argumentData->counter / argumentData->maxCounter;
+    argumentData->animationState = (argumentData->animationState + 1) % 4;
+
+    WaitForSingleObject(mutex, INFINITE);
+
+    gotoxy(17, LOADING_BARS_OFFSET + argumentData->threadNumber);
+    printf("%c", animation[argumentData->animationState]);
+    for (int i = 0; i < (int)(progress * LOADING_BAR_LENGTH); ++i)
+    {
+        printf(LOADING_BAR_CHAR);
+    }
+    gotoxy(0, LOADING_BARS_OFFSET + argumentData->threadNumber);
+    printf("T%d: % 5x [% 4d%%]\n", argumentData->threadNumber, argumentData->id, (int)(progress * 100));
+    gotoxy(0, 0);
+    ReleaseMutex(mutex);
+}
+
+DWORD WINAPI worker(void *args)
+{
+    struct threadData *argumentData = (struct threadData *)args;
+    int workerDuration = 60000;
+    int sleepTime = argumentData->maxCounter;
+
+    gotoxy(1, argumentData->maxCounter);
+    while (argumentData->counter < argumentData->maxCounter && !argumentData->isDeleted)
+    {
+        Sleep(sleepTime);
+        printLoadingBar(argumentData);
+    }
+    if (argumentData->isDeleted)
+    {
+        deleteThread(argumentData->threadNumber);
+    }
+    argumentData->isCompleted = true;
+    return 0;
+}
 
 void clearLogsAndGainMutex()
 {
@@ -78,13 +139,19 @@ void deleteThread(int index)
 
 void handleThreadDeletion()
 {
+
     int num;
     clearLogsAndGainMutex();
 
     gotoxy(0, 10);
-    printf("Provide index of a thread to delete:\n");
+    printf(threadsCount == 0 ? "No threads aviable!\n" : "Provide index of a thread to delete:\n");
 
     ReleaseMutex(mutex);
+
+    if (threadsCount == 0)
+    {
+        return;
+    }
 
     while (true)
     {
@@ -154,7 +221,6 @@ int handlePriorityChoosing()
         }
     }
 }
-
 void handleThreadPriorityChange()
 {
     int priority = handlePriorityChoosing();
@@ -177,13 +243,13 @@ void handleThreadPriorityChange()
         }
     }
 }
-
 void handleNewThreadCreation()
 {
     int priority = handlePriorityChoosing();
+    int speed = handleThreadSpeedChoosing();
     if (priority != -2137)
     {
-        createNewThread(priority, 300);
+        createNewThread(priority, speed);
         clearLogsAndGainMutex();
         gotoxy(0, 0);
         printColored(printf("Successfully created thread with index: %d \n", threadsCount), GREEN);
@@ -193,6 +259,18 @@ void handleNewThreadCreation()
     }
 }
 
+int handleThreadSpeedChoosing()
+{
+    int num;
+    clearLogsAndGainMutex();
+
+    printf("Provide workload (the greater the longer work time (about 50-500))): \n");
+    gotoxy(0, 0);
+
+    ReleaseMutex(mutex);
+    scanf("%d", &num);
+    return num;
+}
 void handleThreadsMenu()
 {
     int num;
@@ -224,59 +302,4 @@ void handleThreadsMenu()
             break;
         }
     }
-}
-
-int main(int argc, char **argv)
-{
-    mutex = CreateMutex(NULL, FALSE, NULL);
-    int i;
-    system("cls");
-    printf(" Uruchomienie programu \n");
-
-    for (i = 0; i < 3; i++)
-    {
-        createNewThread(THREAD_PRIORITY_NORMAL, 150);
-    }
-    handleThreadsMenu();
-    printf("FINISED - wait for 1s\n");
-    return 0;
-}
-
-void printLoadingBar(struct threadData *argumentData)
-{
-    double progress = (double)++argumentData->counter / argumentData->maxCounter;
-    argumentData->animationState = (argumentData->animationState + 1) % 4;
-
-    WaitForSingleObject(mutex, INFINITE);
-
-    gotoxy(17, LOADING_BARS_OFFSET + argumentData->threadNumber);
-    printf("%c", animation[argumentData->animationState]);
-    for (int i = 0; i < (int)(progress * LOADING_BAR_LENGTH); ++i)
-    {
-        printf(LOADING_BAR_CHAR);
-    }
-    gotoxy(0, LOADING_BARS_OFFSET + argumentData->threadNumber);
-    printf("T%d: % 5x [% 4d%%]\n", argumentData->threadNumber, argumentData->id, (int)(progress * 100));
-
-    ReleaseMutex(mutex);
-}
-
-DWORD WINAPI worker(void *args)
-{
-    struct threadData *argumentData = (struct threadData *)args;
-    int workerDuration = 60000;
-    int sleepTime = argumentData->maxCounter;
-
-    gotoxy(1, argumentData->maxCounter);
-    while (argumentData->counter < argumentData->maxCounter && !argumentData->isDeleted)
-    {
-        Sleep(sleepTime);
-        printLoadingBar(argumentData);
-    }
-    if (argumentData->isDeleted)
-    {
-        deleteThread(argumentData->threadNumber);
-    }
-    argumentData->isCompleted = true;
-    return 0;
 }
